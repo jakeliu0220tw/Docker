@@ -1,0 +1,12 @@
+version: '2'
+
+services:
+  fluentbit:
+    image: fluent/fluent-bit:1.8.1
+    command: /fluent-bit/bin/fluent-bit -i dummy -o stdout
+    volumes:
+      - 'fluentbit_data:/fluentbit/data'
+
+volumes:
+  fluentbit_data:
+    driver: local

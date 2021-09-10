@@ -1,0 +1,89 @@
+version: "3.0"  # optional since v1.27.0
+services:
+  timescaledb:
+    image: timescaledev/promscale-extension:latest-pg12
+    environment:
+      POSTGRES_USERNAME: postgres
+      POSTGRES_PASSWORD: postgres1234
+      POSTGRES_DB: tsdb
+    volumes:
+      - "./data/postgres:/var/lib/postgresql/data"
+    ports:
+      - "5432:5432/tcp"
+    networks:
+      - timescale-network
+    command: 'postgres -csynchronous_commit=off'
+
+#  prometheus:
+#    image: prom/prometheus:latest
+#    ports:
+#      - 9090:9090/tcp
+#    networks:
+#      - timescale-network
+#    volumes:
+#      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+
+#  promscale:
+#    image: timescale/promscale:0.5
+#    environment:
+#      PROMSCALE_DB_CONNECT_RETRIES: 10
+#      PROMSCALE_WEB_TELEMETRY_PATH: /metrics-text
+#      PROMSCALE_DB_URI: postgres://postgres:password@db:5432/postgres?sslmode=allow
+#    depends_on:
+#      - timescaledb
+#      - prometheus
+#    ports:
+#      - 9201:9201
+#    networks:
+#      - timescale-network
+#    command: '-db-password=postgres1234 -db-port=5432 -db-name=postgres -db-host=timescaledb -db-ssl-mode=allow'
+#    restart: on-failure
+
+#  node_exporter:
+#    image: quay.io/prometheus/node-exporter
+#    depends_on:
+#      - prometheus
+#    ports:
+#      - "9100:9100"
+#    networks:
+#      - timescale-network
+
+  renderer:
+    image: grafana/grafana-image-renderer:latest
+    ports:
+      - 8081
+    networks:
+      - timescale-network
+
+  grafana:
+    image: grafana/grafana:8.0.5
+    depends_on:
+      - timescaledb
+      - renderer
+    environment:
+      GF_SERVER_DOMAIN: ${HOST}
+#      GF_FEATURE_TOGGLES_ENABLE: ngalert
+      GF_RENDERING_SERVER_URL: http://renderer:8081/render
+      GF_RENDERING_CALLBACK_URL: http://grafana:3000/
+      GF_LOG_FILTERS: rendering:debug
+    ports:
+      - "3000:3000/tcp"
+    networks:
+      - timescale-network
+    volumes:
+      - "./data/grafana:/var/lib/grafana:rw"
+    user: "root"
+
+  pgadmin:
+    image: biarms/pgadmin4:4.21
+    depends_on:
+      - timescaledb
+    ports:
+      - "5050:5050/tcp"
+    networks:
+      - timescale-network
+    volumes:
+      - "./data/pgadmin/tmp:/tmp"
+
+networks:
+  timescale-network:
